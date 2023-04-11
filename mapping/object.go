@@ -63,6 +63,14 @@ func ScanRows2Value(dst reflect.Value, result resultset.QueryResult) (int64, err
 }
 
 func deserialize(dst reflect.Value, columns []string, values []interface{}) bool {
+	vv := make([]reflect.Value, len(values))
+	for i, v := range values {
+		vv[i] = reflect.ValueOf(v)
+	}
+	return deserializeValue(dst, columns, vv)
+}
+
+func deserializeValue(dst reflect.Value, columns []string, values []reflect.Value) bool {
 	rv := dst
 	rt := rv.Type()
 	if rt.Kind() == reflect.Slice {
@@ -71,7 +79,7 @@ func deserialize(dst reflect.Value, columns []string, values []interface{}) bool
 	for i := range columns {
 		switch rv.Kind() {
 		case reflect.Map:
-			rv.SetMapIndex(reflect.ValueOf(columns[i]), reflect.ValueOf(values[i]))
+			rv.SetMapIndex(reflect.ValueOf(columns[i]), values[i])
 		case reflect.Struct:
 			tt := rv.Type()
 			s := tt.NumField()
@@ -83,12 +91,12 @@ func deserialize(dst reflect.Value, columns []string, values []interface{}) bool
 				}
 				if name == columns[i] {
 					fv := rv.Field(j)
-					fv.Set(reflect.ValueOf(values[i]))
+					fv.Set(values[i])
 					break
 				}
 			}
 		default:
-			reflection.SetValue(rv, reflect.ValueOf(values[0]))
+			reflection.SetValue(rv, values[0])
 			break
 		}
 	}
@@ -97,4 +105,38 @@ func deserialize(dst reflect.Value, columns []string, values []interface{}) bool
 		return true
 	}
 	return false
+}
+
+func setValue(dst, v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Map:
+		kvs := v.MapKeys()
+		columns := make([]string, len(kvs))
+		values := make([]reflect.Value, len(kvs))
+		for i, k := range kvs {
+			if k.Kind() == reflect.String {
+				columns[i] = k.Interface().(string)
+				values[i] = v.MapIndex(k)
+			}
+		}
+		return deserializeValue(dst, columns, values)
+	case reflect.Struct:
+		tt := v.Type()
+		s := tt.NumField()
+		columns := make([]string, s)
+		values := make([]reflect.Value, s)
+		for i := 0; i < s; i++ {
+			ft := tt.Field(i)
+			name := ft.Name
+			if tn, ok := ft.Tag.Lookup(FieldAliasTagName); ok {
+				name = tn
+			}
+			columns[i] = name
+			values[i] = v.Field(i)
+		}
+		return deserializeValue(dst, columns, values)
+	default:
+		reflection.SetValue(dst, v)
+		return false
+	}
 }
