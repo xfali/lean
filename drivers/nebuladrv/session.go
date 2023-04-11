@@ -15,20 +15,20 @@
  * limitations under the License.
  */
 
-package nebula
+package nebuladrv
 
 import (
 	"context"
 	"fmt"
-	nebula_go "github.com/vesoft-inc/nebula-go/v3"
+	nebula "github.com/vesoft-inc/nebula-go/v3"
 	"github.com/xfali/lean/resultset"
 )
 
 type nebulaSession struct {
-	sess *nebula_go.Session
+	sess *nebula.Session
 }
 
-func NewNebulaSession(sess *nebula_go.Session) *nebulaSession {
+func NewNebulaSession(sess *nebula.Session) *nebulaSession {
 	return &nebulaSession{
 		sess: sess,
 	}
@@ -39,7 +39,7 @@ func (s *nebulaSession) Query(ctx context.Context, stmt string, params ...interf
 }
 
 func (s *nebulaSession) Execute(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
-	var rs *nebula_go.ResultSet
+	var rs *nebula.ResultSet
 	var err error
 	if len(params) == 0 {
 		rs, err = s.sess.Execute(stmt)

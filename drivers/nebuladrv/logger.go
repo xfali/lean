@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-package nebula
+package nebuladrv
 
 import (
-	nebula_go "github.com/vesoft-inc/nebula-go/v3"
+	nebula "github.com/vesoft-inc/nebula-go/v3"
 	"github.com/xfali/xlog"
 )
 
 type logger struct {
 	log xlog.Logger
-	nebula_go.Logger
+	nebula.Logger
 }
 
 func (l *logger) Info(msg string) {

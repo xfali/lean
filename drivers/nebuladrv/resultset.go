@@ -15,23 +15,23 @@
  * limitations under the License.
  */
 
-package nebula
+package nebuladrv
 
 import (
 	"errors"
 	"fmt"
-	nebula_go "github.com/vesoft-inc/nebula-go/v3"
+	nebula "github.com/vesoft-inc/nebula-go/v3"
 	"github.com/xfali/reflection"
 	"reflect"
 	"time"
 )
 
 type nebulaResultSet struct {
-	rs    *nebula_go.ResultSet
+	rs    *nebula.ResultSet
 	index int
 }
 
-func NewNebulaResultSet(rs *nebula_go.ResultSet) *nebulaResultSet {
+func NewNebulaResultSet(rs *nebula.ResultSet) *nebulaResultSet {
 	ret := &nebulaResultSet{
 		rs:    rs,
 		index: 0,
@@ -77,7 +77,7 @@ func (r *nebulaResultSet) RowsAffected() (int64, error) {
 	return 0, errors.New("Not support ")
 }
 
-func set2Value(dest interface{}, value *nebula_go.ValueWrapper) error {
+func set2Value(dest interface{}, value *nebula.ValueWrapper) error {
 	if dst, ok := dest.(*interface{}); ok {
 		if value.IsNull() {
 			return nil
@@ -128,7 +128,7 @@ func set2Value(dest interface{}, value *nebula_go.ValueWrapper) error {
 	return fmt.Errorf("Only support Dest type *interface{} but get [%s] ", reflect.TypeOf(dest).String())
 }
 
-func checkResultSet(rs *nebula_go.ResultSet, err error) error {
+func checkResultSet(rs *nebula.ResultSet, err error) error {
 	if !reflection.IsNil(err) {
 		return err
 	}

@@ -15,18 +15,18 @@
  * limitations under the License.
  */
 
-package nebula
+package nebuladrv
 
 import (
 	"errors"
 	"fmt"
-	nebulacli "github.com/vesoft-inc/nebula-go/v3"
+	nebula "github.com/vesoft-inc/nebula-go/v3"
 	"github.com/xfali/lean/session"
 	"github.com/xfali/xlog"
 )
 
 type nebulaConnection struct {
-	pool     *nebulacli.ConnectionPool
+	pool     *nebula.ConnectionPool
 	username string
 	password string
 }
@@ -73,7 +73,7 @@ type connOpts struct{}
 
 var ConnOpts connOpts
 
-func (connOpts) WithConnectionPool(pool *nebulacli.ConnectionPool) ConnectionOpt {
+func (connOpts) WithConnectionPool(pool *nebula.ConnectionPool) ConnectionOpt {
 	return func(connection *nebulaConnection) {
 		connection.pool = pool
 	}
@@ -86,9 +86,9 @@ func (connOpts) WithUserInfo(username, password string) ConnectionOpt {
 	}
 }
 
-func NebulaConnPoolCreator(addresses []nebulacli.HostAddress, conf nebulacli.PoolConfig) func(logger xlog.Logger) (*nebulacli.ConnectionPool, error) {
-	return func(log xlog.Logger) (*nebulacli.ConnectionPool, error) {
-		return nebulacli.NewConnectionPool(addresses, conf, &logger{
+func NebulaConnPoolCreator(addresses []nebula.HostAddress, conf nebula.PoolConfig) func(logger xlog.Logger) (*nebula.ConnectionPool, error) {
+	return func(log xlog.Logger) (*nebula.ConnectionPool, error) {
+		return nebula.NewConnectionPool(addresses, conf, &logger{
 			log: log,
 		})
 	}
