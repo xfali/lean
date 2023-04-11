@@ -21,21 +21,19 @@ import (
 	"errors"
 	"fmt"
 	nebula_go "github.com/vesoft-inc/nebula-go/v3"
-	"github.com/vesoft-inc/nebula-go/v3/nebula"
 	"github.com/xfali/reflection"
+	"reflect"
+	"time"
 )
 
 type nebulaResultSet struct {
 	rs    *nebula_go.ResultSet
-	rows  []*nebula.Row
 	index int
 }
 
 func NewNebulaResultSet(rs *nebula_go.ResultSet) *nebulaResultSet {
-	rs.GetRowValuesByIndex()
 	ret := &nebulaResultSet{
 		rs:    rs,
-		rows:  rs.GetRows(),
 		index: 0,
 	}
 	return ret
@@ -46,16 +44,21 @@ func (r *nebulaResultSet) Columns() ([]string, error) {
 }
 
 func (r *nebulaResultSet) Next() bool {
-	return r.index != len(r.rows)
+	return r.index != r.rs.GetRowSize()
 }
 
 func (r *nebulaResultSet) Scan(dest ...interface{}) error {
-	row := r.rows[r.index]
-	for i, v := range row.GetValues() {
-		if i < len(dest)-1 {
-			if err := set2Value(dest[i], v); err != nil {
-				return err
-			}
+	values, err := r.rs.GetRowValuesByIndex(r.index)
+	if err != nil {
+		return err
+	}
+	for i := 0; i < r.rs.GetColSize(); i++ {
+		v, err := values.GetValueByIndex(i)
+		if err != nil {
+			return err
+		}
+		if err := set2Value(dest[i], v); err != nil {
+			return err
 		}
 	}
 	r.index++
@@ -74,42 +77,55 @@ func (r *nebulaResultSet) RowsAffected() (int64, error) {
 	return 0, errors.New("Not support ")
 }
 
-func set2Value(dest interface{}, value *nebula.Value) error {
-	//if value.IsSetNVal() {
-	//	return nil
-	//} else if value.IsSetBVal() {
-	//	return "bool"
-	//} else if value.IsSetIVal() {
-	//	return "int"
-	//} else if value.IsSetFVal() {
-	//	return "float"
-	//} else if value.IsSetSVal() {
-	//	return "string"
-	//} else if value.IsSetDVal() {
-	//	return "date"
-	//} else if value.IsSetTVal() {
-	//	return "time"
-	//} else if value.IsSetDtVal() {
-	//	return "datetime"
-	//} else if value.IsSetVVal() {
-	//	return "vertex"
-	//} else if value.IsSetEVal() {
-	//	return "edge"
-	//} else if value.IsSetPVal() {
-	//	return "path"
-	//} else if value.IsSetLVal() {
-	//	return "list"
-	//} else if value.IsSetMVal() {
-	//	return "map"
-	//} else if value.IsSetUVal() {
-	//	return "set"
-	//} else if value.IsSetGgVal() {
-	//	return "geography"
-	//} else if value.IsSetDuVal() {
-	//	return "duration"
-	//}
-	//return "empty"
-	return nil
+func set2Value(dest interface{}, value *nebula_go.ValueWrapper) error {
+	if dst, ok := dest.(*interface{}); ok {
+		if value.IsNull() {
+			return nil
+		} else if value.IsBool() {
+			*dst, _ = value.AsBool()
+		} else if value.IsInt() {
+			*dst, _ = value.AsInt()
+		} else if value.IsFloat() {
+			*dst, _ = value.AsFloat()
+		} else if value.IsString() {
+			*dst, _ = value.AsString()
+		} else if value.IsDate() {
+			d, _ := value.AsDate()
+			t, err := time.Parse("2006-13-02", fmt.Sprintf("%04d-%02d-%02d", d.GetYear(), d.GetMonth(), d.GetDay()))
+			if err != nil {
+				return err
+			}
+			*dst = t
+		} else if value.IsTime() {
+			return errors.New("Not support nebula value type [time] ")
+		} else if value.IsDateTime() {
+			dt, _ := value.AsDateTime()
+			d, _ := dt.GetLocalDateTimeWithTimezoneName("UTC")
+			t, err := time.ParseInLocation("2006-13-02 15:04:05", fmt.Sprintf("%04d-%02d-%02d %02d:%02d:%02d", d.GetYear(), d.GetMonth(), d.GetDay(), d.GetHour(), d.GetMinute(), d.GetSec()), time.UTC)
+			if err != nil {
+				return err
+			}
+			*dst = t
+		} else if value.IsVertex() {
+			return errors.New("Not support nebula value type [vertex] ")
+		} else if value.IsEdge() {
+			return errors.New("Not support nebula value type [edge] ")
+		} else if value.IsPath() {
+			return errors.New("Not support nebula value type [path] ")
+		} else if value.IsList() {
+			return errors.New("Not support nebula value type [list] ")
+		} else if value.IsMap() {
+			return errors.New("Not support nebula value type [map] ")
+		} else if value.IsSet() {
+			return errors.New("Not support nebula value type [set] ")
+		} else if value.IsGeography() {
+			return errors.New("Not support nebula value type [geography] ")
+		} else if value.IsDuration() {
+			return errors.New("Not support nebula value type [duration] ")
+		}
+	}
+
+	return fmt.Errorf("Only support Dest type *interface{} but get [%s] ", reflect.TypeOf(dest).String())
 }
 
 func checkResultSet(rs *nebula_go.ResultSet, err error) error {

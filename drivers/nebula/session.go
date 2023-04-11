@@ -28,6 +28,12 @@ type nebulaSession struct {
 	sess *nebula_go.Session
 }
 
+func NewNebulaSession(sess *nebula_go.Session) *nebulaSession {
+	return &nebulaSession{
+		sess: sess,
+	}
+}
+
 func (s *nebulaSession) Query(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
 	return s.Execute(ctx, stmt, params...)
 }
