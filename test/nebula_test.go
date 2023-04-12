@@ -19,6 +19,7 @@ package test
 
 import (
 	"context"
+	"encoding/json"
 	nebula "github.com/vesoft-inc/nebula-go/v3"
 	"github.com/xfali/lean/drivers/nebuladrv"
 	"github.com/xfali/lean/mapping"
@@ -76,7 +77,8 @@ func TestNebulaTag(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		t.Log(v)
+		s, _ := json.MarshalIndent(v, "", "	")
+		t.Log(string(s))
 		return nil
 	})
 	if err != nil {
@@ -85,28 +87,61 @@ func TestNebulaTag(t *testing.T) {
 }
 
 func TestNebulaProperties(t *testing.T) {
-	err := RunWithSession(func(sess session.Session) error {
-		ctx := context.Background()
-		_, err := sess.Execute(ctx, "USE entities")
-		if err != nil {
-			t.Fatal(err)
-		}
-		ret, err := sess.Query(ctx, "MATCH (v) RETURN properties(v) as vp LIMIT 3")
-		if err != nil {
-			t.Fatal(err)
-		}
-		v := struct {
-			R map[string]interface{} `column:"vp"`
-		}{}
-		_, err = mapping.ScanRows(&v, ret)
-		if err != nil {
-			t.Fatal(err)
-		}
+	t.Run("one", func(t *testing.T) {
+		err := RunWithSession(func(sess session.Session) error {
+			ctx := context.Background()
+			_, err := sess.Execute(ctx, "USE entities")
+			if err != nil {
+				t.Fatal(err)
+			}
+			ret, err := sess.Query(ctx, "MATCH (v) RETURN properties(v) as vp LIMIT 3")
+			if err != nil {
+				t.Fatal(err)
+			}
+			v := struct {
+				R map[string]interface{} `column:"vp"`
+			}{}
+			_, err = mapping.ScanRows(&v, ret)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		t.Log(v)
-		return nil
+			s, _ := json.MarshalIndent(v, "", "	")
+			t.Log(string(s))
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	t.Run("slice", func(t *testing.T) {
+		err := RunWithSession(func(sess session.Session) error {
+			ctx := context.Background()
+			_, err := sess.Execute(ctx, "USE entities")
+			if err != nil {
+				t.Fatal(err)
+			}
+			ret, err := sess.Query(ctx, "MATCH (v) RETURN properties(v) as vp LIMIT 3")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var v []struct {
+				R map[string]interface{} `column:"vp"`
+			}
+			_, err = mapping.ScanRows(&v, ret)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for _, o := range v {
+				s, _ := json.MarshalIndent(o, "", "	")
+				t.Log(string(s))
+			}
+
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
 }
