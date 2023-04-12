@@ -36,6 +36,7 @@ func ScanRows(dst interface{}, result resultset.QueryResult) (int64, error) {
 }
 
 func ScanRows2Value(dst reflect.Value, result resultset.QueryResult) (int64, error) {
+	dst = reflect.Indirect(dst)
 	columns, err := result.Columns()
 	if err != nil {
 		return 0, err
@@ -74,12 +75,22 @@ func deserializeValue(dst reflect.Value, columns []string, values []reflect.Valu
 	rv := dst
 	rt := rv.Type()
 	if rt.Kind() == reflect.Slice {
-		rv = rv.Elem()
+		et := rt.Elem()
+		rv = reflect.New(et).Elem()
 	}
 	for i := range columns {
+		if !values[i].IsValid() {
+			continue
+		}
 		switch rv.Kind() {
 		case reflect.Map:
-			rv.SetMapIndex(reflect.ValueOf(columns[i]), values[i])
+			if rv.IsNil() {
+				rv.Set(reflect.MakeMap(rt))
+			}
+			gv := getValue(rt.Elem(), values[i])
+			if gv.IsValid() {
+				rv.SetMapIndex(reflect.ValueOf(columns[i]), gv)
+			}
 		case reflect.Struct:
 			tt := rv.Type()
 			s := tt.NumField()
@@ -91,12 +102,12 @@ func deserializeValue(dst reflect.Value, columns []string, values []reflect.Valu
 				}
 				if name == columns[i] {
 					fv := rv.Field(j)
-					fv.Set(values[i])
+					fv.Set(getValue(fv.Type(), values[i]))
 					break
 				}
 			}
 		default:
-			reflection.SetValue(rv, values[0])
+			_ = reflection.SetValue(rv, values[0])
 			break
 		}
 	}
@@ -107,7 +118,7 @@ func deserializeValue(dst reflect.Value, columns []string, values []reflect.Valu
 	return false
 }
 
-func setValue(dst, v reflect.Value) bool {
+func getValue(et reflect.Type, v reflect.Value) reflect.Value {
 	switch v.Kind() {
 	case reflect.Map:
 		kvs := v.MapKeys()
@@ -119,7 +130,9 @@ func setValue(dst, v reflect.Value) bool {
 				values[i] = v.MapIndex(k)
 			}
 		}
-		return deserializeValue(dst, columns, values)
+		ret := reflect.New(et).Elem()
+		_ = deserializeValue(ret, columns, values)
+		return ret
 	case reflect.Struct:
 		tt := v.Type()
 		s := tt.NumField()
@@ -134,9 +147,10 @@ func setValue(dst, v reflect.Value) bool {
 			columns[i] = name
 			values[i] = v.Field(i)
 		}
-		return deserializeValue(dst, columns, values)
+		ret := reflect.New(et).Elem()
+		_ = deserializeValue(ret, columns, values)
+		return ret
 	default:
-		reflection.SetValue(dst, v)
-		return false
+		return v
 	}
 }

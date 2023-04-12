@@ -50,7 +50,7 @@ func (s *nebulaSession) Execute(ctx context.Context, stmt string, params ...inte
 		}
 		rs, err = s.sess.ExecuteWithParameter(stmt, pm)
 	}
-	err = checkResultSet(rs, err)
+	err = CheckResultSet(rs, err)
 	if err != nil {
 		return nil, err
 	}

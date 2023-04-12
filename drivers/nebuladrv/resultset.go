@@ -83,12 +83,16 @@ func set2Value(dest interface{}, value *nebula.ValueWrapper) error {
 			return nil
 		} else if value.IsBool() {
 			*dst, _ = value.AsBool()
+			return nil
 		} else if value.IsInt() {
 			*dst, _ = value.AsInt()
+			return nil
 		} else if value.IsFloat() {
 			*dst, _ = value.AsFloat()
+			return nil
 		} else if value.IsString() {
 			*dst, _ = value.AsString()
+			return nil
 		} else if value.IsDate() {
 			d, _ := value.AsDate()
 			t, err := time.Parse("2006-13-02", fmt.Sprintf("%04d-%02d-%02d", d.GetYear(), d.GetMonth(), d.GetDay()))
@@ -96,6 +100,7 @@ func set2Value(dest interface{}, value *nebula.ValueWrapper) error {
 				return err
 			}
 			*dst = t
+			return nil
 		} else if value.IsTime() {
 			return errors.New("Not support nebula value type [time] ")
 		} else if value.IsDateTime() {
@@ -106,6 +111,7 @@ func set2Value(dest interface{}, value *nebula.ValueWrapper) error {
 				return err
 			}
 			*dst = t
+			return nil
 		} else if value.IsVertex() {
 			return errors.New("Not support nebula value type [vertex] ")
 		} else if value.IsEdge() {
@@ -113,9 +119,29 @@ func set2Value(dest interface{}, value *nebula.ValueWrapper) error {
 		} else if value.IsPath() {
 			return errors.New("Not support nebula value type [path] ")
 		} else if value.IsList() {
-			return errors.New("Not support nebula value type [list] ")
+			l, _ := value.AsList()
+			vv := make([]interface{}, len(l))
+			for i := range l {
+				err := set2Value(&vv[i], &l[i])
+				if err != nil {
+					return err
+				}
+			}
+			*dst = vv
+			return nil
 		} else if value.IsMap() {
-			return errors.New("Not support nebula value type [map] ")
+			l, _ := value.AsMap()
+			vv := make(map[string]interface{}, len(l))
+			for k, v := range l {
+				var o interface{}
+				err := set2Value(&o, &v)
+				if err != nil {
+					return err
+				}
+				vv[k] = o
+			}
+			*dst = vv
+			return nil
 		} else if value.IsSet() {
 			return errors.New("Not support nebula value type [set] ")
 		} else if value.IsGeography() {
@@ -128,7 +154,7 @@ func set2Value(dest interface{}, value *nebula.ValueWrapper) error {
 	return fmt.Errorf("Only support Dest type *interface{} but get [%s] ", reflect.TypeOf(dest).String())
 }
 
-func checkResultSet(rs *nebula.ResultSet, err error) error {
+func CheckResultSet(rs *nebula.ResultSet, err error) error {
 	if !reflection.IsNil(err) {
 		return err
 	}
