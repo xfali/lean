@@ -126,7 +126,7 @@ func TestNebulaProperties(t *testing.T) {
 				t.Fatal(err)
 			}
 			var v []struct {
-				R map[string]interface{} `column:"vp"`
+				R map[string]string `column:"vp"`
 			}
 			_, err = mapping.ScanRows(&v, ret)
 			if err != nil {

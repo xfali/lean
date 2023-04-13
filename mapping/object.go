@@ -25,6 +25,7 @@ import (
 
 const (
 	FieldAliasTagName = "column"
+	SliceDummyColumn  = ""
 )
 
 var (
@@ -68,16 +69,22 @@ func deserialize(dst reflect.Value, columns []string, values []interface{}) bool
 	for i, v := range values {
 		vv[i] = reflect.ValueOf(v)
 	}
-	return deserializeValue(dst, columns, vv)
-}
-
-func deserializeValue(dst reflect.Value, columns []string, values []reflect.Value) bool {
 	rv := dst
 	rt := rv.Type()
 	if rt.Kind() == reflect.Slice {
 		et := rt.Elem()
 		rv = reflect.New(et).Elem()
 	}
+	next := deserializeValue(rv, columns, vv)
+	if rt.Kind() == reflect.Slice {
+		dst.Set(reflect.Append(dst, rv))
+		return true
+	}
+	return next
+}
+
+func deserializeValue(rv reflect.Value, columns []string, values []reflect.Value) bool {
+	rt := rv.Type()
 	for i := range columns {
 		if !values[i].IsValid() {
 			continue
@@ -87,22 +94,44 @@ func deserializeValue(dst reflect.Value, columns []string, values []reflect.Valu
 			if rv.IsNil() {
 				rv.Set(reflect.MakeMap(rt))
 			}
+			et := rt.Elem()
+			gv := getValue(et, values[i])
+			if gv.IsValid() {
+				if gv.Type().AssignableTo(et) {
+					rv.SetMapIndex(reflect.ValueOf(columns[i]), gv)
+				} else {
+					dv := reflect.New(et).Elem()
+					if reflection.SetValue(dv, gv) {
+						rv.SetMapIndex(reflect.ValueOf(columns[i]), dv)
+					}
+				}
+			}
+		case reflect.Slice:
 			gv := getValue(rt.Elem(), values[i])
 			if gv.IsValid() {
-				rv.SetMapIndex(reflect.ValueOf(columns[i]), gv)
+				rv.Set(gv)
 			}
 		case reflect.Struct:
 			tt := rv.Type()
 			s := tt.NumField()
 			for j := 0; j < s; j++ {
-				ft := tt.Field(j)
-				name := ft.Name
-				if tn, ok := ft.Tag.Lookup(FieldAliasTagName); ok {
+				ff := tt.Field(j)
+				name := ff.Name
+				if tn, ok := ff.Tag.Lookup(FieldAliasTagName); ok {
 					name = tn
 				}
 				if name == columns[i] {
 					fv := rv.Field(j)
-					fv.Set(getValue(fv.Type(), values[i]))
+					ft := fv.Type()
+					gv := getValue(ft, values[i])
+					if gv.IsValid() {
+						if gv.Type().AssignableTo(ft) {
+							fv.Set(gv)
+						} else {
+							_ = reflection.SetValue(fv, gv)
+						}
+
+					}
 					break
 				}
 			}
@@ -110,10 +139,6 @@ func deserializeValue(dst reflect.Value, columns []string, values []reflect.Valu
 			_ = reflection.SetValue(rv, values[0])
 			break
 		}
-	}
-	if rt.Kind() == reflect.Slice {
-		dst.Set(reflect.Append(dst, rv))
-		return true
 	}
 	return false
 }
@@ -132,6 +157,14 @@ func getValue(et reflect.Type, v reflect.Value) reflect.Value {
 		}
 		ret := reflect.New(et).Elem()
 		_ = deserializeValue(ret, columns, values)
+		return ret
+	case reflect.Slice:
+		ret := reflect.MakeSlice(reflect.SliceOf(et), 0, v.Len())
+		for i := 0; i < v.Len(); i++ {
+			retV := reflect.New(et).Elem()
+			_ = deserializeValue(retV, []string{SliceDummyColumn}, []reflect.Value{v.Index(i)})
+			ret.Set(reflect.Append(ret, retV))
+		}
 		return ret
 	case reflect.Struct:
 		tt := v.Type()
