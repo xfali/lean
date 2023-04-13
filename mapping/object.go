@@ -99,11 +99,6 @@ func deserializeValue(rv reflect.Value, columns []string, values []reflect.Value
 			if gv.IsValid() {
 				if gv.Type().AssignableTo(et) {
 					rv.SetMapIndex(reflect.ValueOf(columns[i]), gv)
-				} else {
-					dv := reflect.New(et).Elem()
-					if reflection.SetValue(dv, gv) {
-						rv.SetMapIndex(reflect.ValueOf(columns[i]), dv)
-					}
 				}
 			}
 		case reflect.Slice:
@@ -127,10 +122,7 @@ func deserializeValue(rv reflect.Value, columns []string, values []reflect.Value
 					if gv.IsValid() {
 						if gv.Type().AssignableTo(ft) {
 							fv.Set(gv)
-						} else {
-							_ = reflection.SetValue(fv, gv)
 						}
-
 					}
 					break
 				}
@@ -143,47 +135,68 @@ func deserializeValue(rv reflect.Value, columns []string, values []reflect.Value
 	return false
 }
 
+func interfaceValue(v reflect.Value) reflect.Value {
+	if v.Kind() == reflect.Interface {
+		return reflect.ValueOf(v.Interface())
+	}
+	return v
+}
+
 func getValue(et reflect.Type, v reflect.Value) reflect.Value {
-	switch v.Kind() {
-	case reflect.Map:
-		kvs := v.MapKeys()
-		columns := make([]string, len(kvs))
-		values := make([]reflect.Value, len(kvs))
-		for i, k := range kvs {
-			if k.Kind() == reflect.String {
-				columns[i] = k.Interface().(string)
-				values[i] = v.MapIndex(k)
-			}
-		}
-		ret := reflect.New(et).Elem()
-		_ = deserializeValue(ret, columns, values)
-		return ret
-	case reflect.Slice:
-		ret := reflect.MakeSlice(reflect.SliceOf(et), 0, v.Len())
-		for i := 0; i < v.Len(); i++ {
-			retV := reflect.New(et).Elem()
-			_ = deserializeValue(retV, []string{SliceDummyColumn}, []reflect.Value{v.Index(i)})
-			ret.Set(reflect.Append(ret, retV))
-		}
-		return ret
-	case reflect.Struct:
-		tt := v.Type()
-		s := tt.NumField()
-		columns := make([]string, s)
-		values := make([]reflect.Value, s)
-		for i := 0; i < s; i++ {
-			ft := tt.Field(i)
-			name := ft.Name
-			if tn, ok := ft.Tag.Lookup(FieldAliasTagName); ok {
-				name = tn
-			}
-			columns[i] = name
-			values[i] = v.Field(i)
-		}
-		ret := reflect.New(et).Elem()
-		_ = deserializeValue(ret, columns, values)
-		return ret
-	default:
+	if !v.IsValid() {
 		return v
+	}
+	v = interfaceValue(v)
+	if v.Type().AssignableTo(et) {
+		return v
+	} else {
+		if !reflection.CheckValueNilSafe(v) {
+			switch v.Kind() {
+			case reflect.Map:
+				kvs := v.MapKeys()
+				columns := make([]string, len(kvs))
+				values := make([]reflect.Value, len(kvs))
+				for i, k := range kvs {
+					if k.Kind() == reflect.String {
+						columns[i] = k.Interface().(string)
+						values[i] = interfaceValue(v.MapIndex(k))
+					}
+				}
+				ret := reflect.New(et).Elem()
+				_ = deserializeValue(ret, columns, values)
+				return ret
+			case reflect.Slice:
+				ret := reflect.MakeSlice(reflect.SliceOf(et), 0, v.Len())
+				for i := 0; i < v.Len(); i++ {
+					retV := reflect.New(et).Elem()
+					_ = deserializeValue(retV, []string{SliceDummyColumn}, []reflect.Value{v.Index(i)})
+					ret.Set(reflect.Append(ret, retV))
+				}
+				return ret
+			case reflect.Struct:
+				tt := v.Type()
+				s := tt.NumField()
+				columns := make([]string, s)
+				values := make([]reflect.Value, s)
+				for i := 0; i < s; i++ {
+					ft := tt.Field(i)
+					name := ft.Name
+					if tn, ok := ft.Tag.Lookup(FieldAliasTagName); ok {
+						name = tn
+					}
+					columns[i] = name
+					values[i] = v.Field(i)
+				}
+				ret := reflect.New(et).Elem()
+				_ = deserializeValue(ret, columns, values)
+				return ret
+			default:
+				vv := reflect.New(et).Elem()
+				_ = reflection.SetValue(vv, v)
+				return vv
+			}
+		} else {
+			return reflect.New(et).Elem()
+		}
 	}
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/xfali/lean/session"
 	"github.com/xfali/xlog"
 	"testing"
+	"time"
 )
 
 var (
@@ -71,6 +72,7 @@ func TestNebulaTag(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer ret.Close()
 		var v []string
 		_, err = mapping.ScanRows(&v, ret)
 		if err != nil {
@@ -98,6 +100,7 @@ func TestNebulaProperties(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer ret.Close()
 			v := struct {
 				R map[string]interface{} `column:"vp"`
 			}{}
@@ -125,8 +128,44 @@ func TestNebulaProperties(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer ret.Close()
 			var v []struct {
 				R map[string]string `column:"vp"`
+			}
+			_, err = mapping.ScanRows(&v, ret)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			for _, o := range v {
+				s, _ := json.MarshalIndent(o, "", "	")
+				t.Log(string(s))
+			}
+
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("slice struct", func(t *testing.T) {
+		err := RunWithSession(func(sess session.Session) error {
+			ctx := context.Background()
+			_, err := sess.Execute(ctx, "USE entities")
+			if err != nil {
+				t.Fatal(err)
+			}
+			ret, err := sess.Query(ctx, "MATCH (v) RETURN properties(v) as vp LIMIT 3")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer ret.Close()
+			var v []struct {
+				S struct {
+					Name       string    `column:"name"`
+					UpdateTime time.Time `column:"update_time"`
+				} `column:"vp"`
 			}
 			_, err = mapping.ScanRows(&v, ret)
 			if err != nil {
