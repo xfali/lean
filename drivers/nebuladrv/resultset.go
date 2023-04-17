@@ -149,9 +149,11 @@ func set2Value(dest interface{}, value *nebula.ValueWrapper) error {
 		} else if value.IsDuration() {
 			return errors.New("Not support nebula value type [duration] ")
 		}
+	} else {
+		return fmt.Errorf("Only support Dest type *interface{} but get [%s] ", reflect.TypeOf(dest).String())
 	}
 
-	return fmt.Errorf("Only support Dest type *interface{} but get [%s] ", reflect.TypeOf(dest).String())
+	return nil
 }
 
 func CheckResultSet(rs *nebula.ResultSet, err error) error {
