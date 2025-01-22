@@ -34,6 +34,10 @@ func NewSqlSession(db *sql.DB) *sqlSession {
 	}
 }
 
+func (s *sqlSession) Ping(ctx context.Context) bool {
+	return s.db.PingContext(ctx) == nil
+}
+
 func (s *sqlSession) Query(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
 	v, err := s.db.QueryContext(ctx, stmt, params...)
 	if err != nil {
@@ -51,15 +55,15 @@ func (s *sqlSession) Execute(ctx context.Context, stmt string, params ...interfa
 	return NewSqlExecResultSet(v), nil
 }
 
-func (s *sqlSession) Begin() error {
+func (s *sqlSession) Begin(ctx context.Context) error {
 	return errors.New("Sql not support transaction ")
 }
 
-func (s *sqlSession) Commit() error {
+func (s *sqlSession) Commit(ctx context.Context) error {
 	return errors.New("Sql not support transaction ")
 }
 
-func (s *sqlSession) Rollback() error {
+func (s *sqlSession) Rollback(ctx context.Context) error {
 	return errors.New("Sql not support transaction ")
 }
 

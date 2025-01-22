@@ -35,19 +35,23 @@ func NewNebulaSession(sess *nebula.Session) *nebulaSession {
 	}
 }
 
+func (s *nebulaSession) Ping(ctx context.Context) bool {
+	return s.sess.Ping() == nil
+}
+
 func (s *nebulaSession) Query(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
 	return s.Execute(ctx, stmt, params...)
 }
 
-func (s *nebulaSession) Begin() error {
+func (s *nebulaSession) Begin(ctx context.Context) error {
 	return errors.New("Nebula not support transaction ")
 }
 
-func (s *nebulaSession) Commit() error {
+func (s *nebulaSession) Commit(ctx context.Context) error {
 	return errors.New("Nebula not support transaction ")
 }
 
-func (s *nebulaSession) Rollback() error {
+func (s *nebulaSession) Rollback(ctx context.Context) error {
 	return errors.New("Nebula not support transaction ")
 }
 

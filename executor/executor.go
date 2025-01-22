@@ -24,6 +24,8 @@ import (
 type Executor interface {
 	Close(ctx context.Context, rollback bool) error
 
+	Ping(ctx context.Context) bool
+
 	Query(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error)
 
 	Execute(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error)

@@ -21,8 +21,17 @@ import (
 	"github.com/xfali/lean/handler"
 )
 
+const (
+	StateUnknown     = 0
+	StateBegin       = 1
+	StateCommitting  = 2
+	StateRollbacking = 4
+)
+
 type Transaction interface {
 	Close() error
+
+	Ping(ctx context.Context) bool
 
 	GetHandler() handler.Handler
 

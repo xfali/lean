@@ -55,6 +55,14 @@ func (exec *SimpleExecutor) Close(ctx context.Context, rollback bool) (err error
 	return
 }
 
+func (exec *SimpleExecutor) Ping(ctx context.Context) bool {
+	if exec.closed {
+		return false
+	}
+
+	return exec.transaction.Ping(ctx)
+}
+
 func (exec *SimpleExecutor) Query(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
 	if exec.closed {
 		return nil, errors.ExecutorQueryError

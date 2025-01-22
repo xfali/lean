@@ -55,6 +55,14 @@ func (exec *PrepareExecutor) Close(ctx context.Context, rollback bool) error {
 	return nil
 }
 
+func (exec *PrepareExecutor) Ping(ctx context.Context) bool {
+	if exec.closed {
+		return false
+	}
+
+	return exec.transaction.Ping(ctx)
+}
+
 func (exec *PrepareExecutor) Query(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
 	if exec.closed {
 		return nil, errors.ExecutorQueryError

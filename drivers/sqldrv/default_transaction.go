@@ -17,26 +17,39 @@
 package sqldrv
 
 import (
+	"context"
 	"database/sql"
 	"github.com/xfali/lean/errors"
 	"github.com/xfali/lean/handler"
+	"github.com/xfali/lean/transaction"
+	"sync"
+	"sync/atomic"
 )
 
 type defaultTransaction struct {
 	db *sql.DB
 	tx *sql.Tx
+
+	state  int32
+	locker sync.Mutex
 }
 
 func NewDefaultTransaction(db *sql.DB) *defaultTransaction {
-	ret := &defaultTransaction{db: db}
+	ret := &defaultTransaction{
+		db:    db,
+		state: transaction.StateUnknown,
+	}
 	return ret
 }
 
 func (trans *defaultTransaction) GetHandler() handler.Handler {
+	trans.locker.Lock()
+	defer trans.locker.Unlock()
+
 	if trans.tx == nil {
 		return (*defaultHandler)(trans.db)
 	} else {
-		return &transactionHandler{tx: trans.tx}
+		return (*transactionHandler)(trans.tx)
 	}
 }
 
@@ -44,35 +57,80 @@ func (trans *defaultTransaction) Close() error {
 	return nil
 }
 
-func (trans *defaultTransaction) Begin() error {
+func (trans *defaultTransaction) Ping(ctx context.Context) bool {
+	return trans.db.PingContext(ctx) == nil
+}
+
+func (trans *defaultTransaction) Begin(ctx context.Context) error {
+	if !atomic.CompareAndSwapInt32(&trans.state, transaction.StateUnknown, transaction.StateBegin) {
+		return errors.TransactionHaveBegin
+	}
 	tx, err := trans.db.Begin()
 	if err != nil {
 		return errors.TransactionBeginError.Format(err)
 	}
+	trans.locker.Lock()
 	trans.tx = tx
+	trans.locker.Unlock()
 	return nil
 }
 
-func (trans *defaultTransaction) Commit() error {
-	if trans.tx == nil {
+func (trans *defaultTransaction) Commit(ctx context.Context) error {
+	if !atomic.CompareAndSwapInt32(&trans.state, transaction.StateBegin, transaction.StateCommitting) {
 		return errors.TransactionWithoutBegin
 	}
 
-	err := trans.tx.Commit()
+	trans.locker.Lock()
+	tx := trans.tx
+	trans.locker.Unlock()
+
+	if tx == nil {
+		atomic.StoreInt32(&trans.state, transaction.StateBegin)
+		return errors.TransactionWithoutBegin
+	}
+
+	defer func() {
+		if o := recover(); o != nil {
+			atomic.StoreInt32(&trans.state, transaction.StateBegin)
+			panic(o)
+		}
+	}()
+	err := tx.Commit()
 	if err != nil {
+		atomic.StoreInt32(&trans.state, transaction.StateBegin)
 		return errors.TransactionCommitError.Format(err)
+	} else {
+		atomic.StoreInt32(&trans.state, transaction.StateUnknown)
 	}
 	return nil
 }
 
-func (trans *defaultTransaction) Rollback() error {
-	if trans.tx == nil {
+func (trans *defaultTransaction) Rollback(ctx context.Context) error {
+	if !atomic.CompareAndSwapInt32(&trans.state, transaction.StateBegin, transaction.StateRollbacking) {
 		return errors.TransactionWithoutBegin
 	}
 
-	err := trans.tx.Rollback()
+	trans.locker.Lock()
+	tx := trans.tx
+	trans.locker.Unlock()
+
+	if tx == nil {
+		atomic.StoreInt32(&trans.state, transaction.StateBegin)
+		return errors.TransactionWithoutBegin
+	}
+
+	defer func() {
+		if o := recover(); o != nil {
+			atomic.StoreInt32(&trans.state, transaction.StateBegin)
+			panic(o)
+		}
+	}()
+	err := tx.Rollback()
 	if err != nil {
+		atomic.StoreInt32(&trans.state, transaction.StateBegin)
 		return errors.TransactionRollbackError.Format(err)
+	} else {
+		atomic.StoreInt32(&trans.state, transaction.StateUnknown)
 	}
 	return nil
 }

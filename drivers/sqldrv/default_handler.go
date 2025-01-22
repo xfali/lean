@@ -53,20 +53,18 @@ func (conn *defaultHandler) Execute(ctx context.Context, stmt string, params ...
 	return NewSqlExecResultSet(r), nil
 }
 
-type transactionHandler struct {
-	tx *sql.Tx
-}
+type transactionHandler sql.Tx
 
-func (transConnection *transactionHandler) Prepare(sqlStr string) (statement.Statement, error) {
+func (transHandler *transactionHandler) Prepare(sqlStr string) (statement.Statement, error) {
 	ret := &transactionStatement{
-		tx:  transConnection.tx,
+		tx:  (*sql.Tx)(transHandler),
 		sql: sqlStr,
 	}
 	return ret, nil
 }
 
-func (transConnection *transactionHandler) Query(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
-	db := transConnection.tx
+func (transHandler *transactionHandler) Query(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
+	db := (*sql.Tx)(transHandler)
 	rows, err := db.QueryContext(ctx, stmt, params...)
 	if err != nil {
 		return nil, errors.HandlerQueryError.Format(err)
@@ -74,8 +72,8 @@ func (transConnection *transactionHandler) Query(ctx context.Context, stmt strin
 	return NewSqlQueryResultSet(rows), nil
 }
 
-func (transConnection *transactionHandler) Execute(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
-	db := transConnection.tx
+func (transHandler *transactionHandler) Execute(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
+	db := (*sql.Tx)(transHandler)
 	ret, err := db.ExecContext(ctx, stmt, params...)
 	if err != nil {
 		return nil, errors.HandlerExecuteError.Format(err)

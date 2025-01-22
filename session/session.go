@@ -23,9 +23,17 @@ import (
 )
 
 type Session interface {
+	Ping(ctx context.Context) bool
+
 	Query(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error)
 
 	Execute(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error)
+
+	Begin(ctx context.Context) error
+
+	Commit(ctx context.Context) error
+
+	Rollback(ctx context.Context) error
 
 	Close() error
 }

@@ -33,6 +33,7 @@ var (
 	TransactionCommitError     = gobatisError("22002", "Transaction commit error")
 	TransactionBusinessError   = gobatisError("22003", "Business error in transaction")
 	TransactionBeginError      = gobatisError("22004", "Transaction begin error")
+	TransactionHaveBegin       = gobatisError("22005", "Transaction has been begin state")
 	TransactionRollbackError   = gobatisError("22005", "Transaction rollback error")
 	ConnectionPrepareError     = gobatisError("23001", "Connection prepare error")
 	StatementQueryError        = gobatisError("24001", "statement query error")
