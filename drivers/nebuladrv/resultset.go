@@ -95,7 +95,7 @@ func set2Value(dest interface{}, value *nebula.ValueWrapper) error {
 			return nil
 		} else if value.IsDate() {
 			d, _ := value.AsDate()
-			t, err := time.Parse("2006-13-02", fmt.Sprintf("%04d-%02d-%02d", d.GetYear(), d.GetMonth(), d.GetDay()))
+			t, err := time.Parse("2006-01-02", fmt.Sprintf("%04d-%02d-%02d", d.GetYear(), d.GetMonth(), d.GetDay()))
 			if err != nil {
 				return err
 			}
@@ -106,7 +106,7 @@ func set2Value(dest interface{}, value *nebula.ValueWrapper) error {
 		} else if value.IsDateTime() {
 			dt, _ := value.AsDateTime()
 			d, _ := dt.GetLocalDateTimeWithTimezoneName("UTC")
-			t, err := time.ParseInLocation("2006-13-02 15:04:05", fmt.Sprintf("%04d-%02d-%02d %02d:%02d:%02d", d.GetYear(), d.GetMonth(), d.GetDay(), d.GetHour(), d.GetMinute(), d.GetSec()), time.UTC)
+			t, err := time.ParseInLocation("2006-01-02 15:04:05", fmt.Sprintf("%04d-%02d-%02d %02d:%02d:%02d", d.GetYear(), d.GetMonth(), d.GetDay(), d.GetHour(), d.GetMinute(), d.GetSec()), time.UTC)
 			if err != nil {
 				return err
 			}
