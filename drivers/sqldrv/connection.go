@@ -24,17 +24,27 @@ import (
 	"github.com/xfali/lean/session"
 )
 
+type ConnOpt func(*sqlConnection)
+
 type sqlConnection struct {
 	db             *sql.DB
 	driverName     string
 	dataSourceName string
+
+	sessOpts []SessionOpt
 }
 
-func NewSqlConnection(driverName, dataSourceName string) *sqlConnection {
-	return &sqlConnection{
+func NewSqlConnection(driverName, dataSourceName string, opts ...ConnOpt) *sqlConnection {
+	ret := &sqlConnection{
 		driverName:     driverName,
 		dataSourceName: dataSourceName,
 	}
+
+	for _, opt := range opts {
+		opt(ret)
+	}
+
+	return ret
 }
 
 func (c *sqlConnection) Open() error {
@@ -50,7 +60,7 @@ func (c *sqlConnection) GetSession() (session.Session, error) {
 	if c.db == nil {
 		return nil, errors.New("Connection not opened ")
 	}
-	return NewSqlSession(c.db), nil
+	return NewSqlSession(c.db, c.sessOpts...), nil
 }
 
 func (c *sqlConnection) Close() error {
@@ -58,4 +68,15 @@ func (c *sqlConnection) Close() error {
 		return c.db.Close()
 	}
 	return nil
+}
+
+type connOpts struct {
+}
+
+var ConnOpts connOpts
+
+func (o connOpts) SetCreateSessionOpts(opts ...SessionOpt) ConnOpt {
+	return func(connection *sqlConnection) {
+		connection.sessOpts = opts
+	}
 }

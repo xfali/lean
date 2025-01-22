@@ -20,53 +20,78 @@ package sqldrv
 import (
 	"context"
 	"database/sql"
-	"errors"
+	"github.com/xfali/lean/executor"
 	"github.com/xfali/lean/resultset"
+	"time"
 )
 
+type ExecutorFactory func(db *sql.DB) (executor.Executor, error)
+
+type SessionOpt func(*sqlSession)
+
 type sqlSession struct {
-	db *sql.DB
+	exec    executor.Executor
+	execFac ExecutorFactory
 }
 
-func NewSqlSession(db *sql.DB) *sqlSession {
-	return &sqlSession{
-		db: db,
+func NewSqlSession(db *sql.DB, opts ...SessionOpt) *sqlSession {
+	ret := &sqlSession{
+		execFac: defaultExecutorFactory,
 	}
+	for _, opt := range opts {
+		opt(ret)
+	}
+	exec, err := ret.execFac(db)
+	if err != nil {
+		return nil
+	}
+	ret.exec = exec
+	return ret
+}
+
+func defaultExecutorFactory(db *sql.DB) (executor.Executor, error) {
+	tx := NewDefaultTransaction(db)
+	exec := executor.NewSimpleExecutor(tx)
+	return exec, nil
 }
 
 func (s *sqlSession) Ping(ctx context.Context) bool {
-	return s.db.PingContext(ctx) == nil
+	return s.exec.Ping(ctx)
 }
 
 func (s *sqlSession) Query(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
-	v, err := s.db.QueryContext(ctx, stmt, params...)
-	if err != nil {
-		return nil, err
-	}
-	return NewSqlQueryResultSet(v), nil
+	return s.exec.Query(ctx, stmt, params)
 }
 
 func (s *sqlSession) Execute(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
-	v, err := s.db.ExecContext(ctx, stmt, params...)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewSqlExecResultSet(v), nil
+	return s.exec.Execute(ctx, stmt, params)
 }
 
 func (s *sqlSession) Begin(ctx context.Context) error {
-	return errors.New("Sql not support transaction ")
+	return s.exec.Begin(ctx)
 }
 
 func (s *sqlSession) Commit(ctx context.Context) error {
-	return errors.New("Sql not support transaction ")
+	return s.exec.Commit(ctx, true)
 }
 
 func (s *sqlSession) Rollback(ctx context.Context) error {
-	return errors.New("Sql not support transaction ")
+	return s.exec.Rollback(ctx, true)
 }
 
 func (s *sqlSession) Close() error {
-	return nil
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return s.exec.Close(ctx, false)
+}
+
+type sessOpts struct {
+}
+
+var SessOpts sessOpts
+
+func (o sessOpts) SetExecutorFactory(execFac ExecutorFactory) SessionOpt {
+	return func(session *sqlSession) {
+		session.execFac = execFac
+	}
 }

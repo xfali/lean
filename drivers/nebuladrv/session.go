@@ -43,18 +43,6 @@ func (s *nebulaSession) Query(ctx context.Context, stmt string, params ...interf
 	return s.Execute(ctx, stmt, params...)
 }
 
-func (s *nebulaSession) Begin(ctx context.Context) error {
-	return errors.New("Nebula not support transaction ")
-}
-
-func (s *nebulaSession) Commit(ctx context.Context) error {
-	return errors.New("Nebula not support transaction ")
-}
-
-func (s *nebulaSession) Rollback(ctx context.Context) error {
-	return errors.New("Nebula not support transaction ")
-}
-
 func (s *nebulaSession) Execute(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
 	var rs *nebula.ResultSet
 	var err error
@@ -73,6 +61,18 @@ func (s *nebulaSession) Execute(ctx context.Context, stmt string, params ...inte
 	}
 
 	return NewNebulaResultSet(rs), nil
+}
+
+func (s *nebulaSession) Begin(ctx context.Context) error {
+	return errors.New("Nebula not support transaction ")
+}
+
+func (s *nebulaSession) Commit(ctx context.Context) error {
+	return errors.New("Nebula not support transaction ")
+}
+
+func (s *nebulaSession) Rollback(ctx context.Context) error {
+	return errors.New("Nebula not support transaction ")
 }
 
 func (s *nebulaSession) Close() error {
