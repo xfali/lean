@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025, Xiongfa Li.
+ * Copyright (C) 2023-2025, Xiongfa Li.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	"context"
 	"github.com/xfali/lean/errors"
 	"github.com/xfali/lean/handler"
+	"github.com/xfali/lean/logger"
 	"github.com/xfali/lean/resultset"
 	"github.com/xfali/lean/transaction"
 	"github.com/xfali/xlog"
@@ -35,7 +36,7 @@ type PrepareExecutor struct {
 
 func NewPrepareExecutor(transaction transaction.Transaction, pool handler.StatementPool) *PrepareExecutor {
 	return &PrepareExecutor{
-		logger:      xlog.GetLogger(),
+		logger:      logger.GetLogger(),
 		transaction: transaction,
 		pool:        pool,
 	}

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package extensions
+package logger
 
-import "github.com/xfali/aop"
+import "github.com/xfali/xlog"
 
-type Extension interface {
-	Extend(cut aop.PointCut, advice aop.Advice) Extension
+var GetLogger = func(o ...interface{}) xlog.Logger {
+	return xlog.GetLogger(o...)
 }

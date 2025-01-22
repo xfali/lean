@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2023-2025, Xiongfa Li.
- * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +21,9 @@ import (
 	"encoding/json"
 	nebula "github.com/vesoft-inc/nebula-go/v3"
 	"github.com/xfali/lean/drivers/nebuladrv"
+	"github.com/xfali/lean/logger"
 	"github.com/xfali/lean/mapping"
 	"github.com/xfali/lean/session"
-	"github.com/xfali/xlog"
 	"testing"
 	"time"
 )
@@ -40,7 +39,7 @@ func RunWithSession(f func(sess session.Session) error) error {
 			Host: TestHost,
 			Port: TestPort,
 		},
-	}, nebula.GetDefaultConf())(xlog.GetLogger())
+	}, nebula.GetDefaultConf())(logger.GetLogger())
 	if err != nil {
 		return err
 	}
