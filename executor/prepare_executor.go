@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package sqldrv
+package executor
 
 import (
 	"context"
 	"github.com/xfali/lean/errors"
+	"github.com/xfali/lean/handler"
 	"github.com/xfali/lean/resultset"
 	"github.com/xfali/lean/transaction"
 	"github.com/xfali/xlog"
@@ -28,17 +29,21 @@ type PrepareExecutor struct {
 	logger      xlog.Logger
 	transaction transaction.Transaction
 	closed      bool
+
+	pool handler.StatementPool
 }
 
-func NewPrepareExecutor(transaction transaction.Transaction) *PrepareExecutor {
+func NewPrepareExecutor(transaction transaction.Transaction, pool handler.StatementPool) *PrepareExecutor {
 	return &PrepareExecutor{
 		logger:      xlog.GetLogger(),
 		transaction: transaction,
+		pool:        pool,
 	}
 }
 
 func (exec *PrepareExecutor) Close(ctx context.Context, rollback bool) error {
 	defer func() {
+		exec.pool.PurgeAll()
 		if exec.transaction != nil {
 			err := exec.transaction.Close()
 			if err != nil {
@@ -73,16 +78,14 @@ func (exec *PrepareExecutor) Query(ctx context.Context, stmt string, params ...i
 		return nil, errors.ExecutorGetConnectionError
 	}
 
-	//FIXME: stmt must be close, use stmtCache instead
-	statement, err := conn.Prepare(stmt)
-	defer func() {
-		err := statement.Close()
+	statement, have := exec.pool.Get(conn, stmt)
+	if !have {
+		st, err := conn.Prepare(ctx, stmt)
 		if err != nil {
-			exec.logger.Errorln(err)
+			return nil, err
 		}
-	}()
-	if err != nil {
-		return nil, err
+		statement = st
+		exec.pool.Put(conn, stmt, statement)
 	}
 	return statement.Query(ctx, params...)
 }
@@ -97,17 +100,14 @@ func (exec *PrepareExecutor) Execute(ctx context.Context, stmt string, params ..
 		return nil, errors.ExecutorGetConnectionError
 	}
 
-	//FIXME: stmt must be close, use stmtCache instead
-	statement, err := conn.Prepare(stmt)
-	defer func() {
-		err := statement.Close()
+	statement, have := exec.pool.Get(conn, stmt)
+	if !have {
+		st, err := conn.Prepare(ctx, stmt)
 		if err != nil {
-			exec.logger.Errorln(err)
+			return nil, err
 		}
-	}()
-
-	if err != nil {
-		return nil, err
+		statement = st
+		exec.pool.Put(conn, stmt, statement)
 	}
 	return statement.Execute(ctx, params...)
 }
@@ -117,7 +117,7 @@ func (exec *PrepareExecutor) Begin(ctx context.Context) error {
 		return errors.ExecutorBeginError
 	}
 
-	return exec.transaction.Begin(ctx)
+	return exec.transaction.Begin(ctx, nil)
 }
 
 func (exec *PrepareExecutor) Commit(ctx context.Context, require bool) error {
@@ -126,7 +126,10 @@ func (exec *PrepareExecutor) Commit(ctx context.Context, require bool) error {
 	}
 
 	if require {
-		return exec.transaction.Commit(ctx)
+		return exec.transaction.Commit(ctx, func(handler handler.Handler) error {
+			exec.pool.Purge(handler)
+			return nil
+		})
 	}
 
 	return nil
@@ -135,7 +138,10 @@ func (exec *PrepareExecutor) Commit(ctx context.Context, require bool) error {
 func (exec *PrepareExecutor) Rollback(ctx context.Context, require bool) error {
 	if !exec.closed {
 		if require {
-			return exec.transaction.Rollback(ctx)
+			return exec.transaction.Rollback(ctx, func(handler handler.Handler) error {
+				exec.pool.Purge(handler)
+				return nil
+			})
 		}
 	}
 	return nil

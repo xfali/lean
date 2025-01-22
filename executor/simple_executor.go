@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package sqldrv
+package executor
 
 import (
 	"context"
@@ -94,7 +94,7 @@ func (exec *SimpleExecutor) Begin(ctx context.Context) error {
 		return errors.ExecutorBeginError
 	}
 
-	return exec.transaction.Begin(ctx)
+	return exec.transaction.Begin(ctx, nil)
 }
 
 func (exec *SimpleExecutor) Commit(ctx context.Context, require bool) error {
@@ -103,7 +103,7 @@ func (exec *SimpleExecutor) Commit(ctx context.Context, require bool) error {
 	}
 
 	if require {
-		return exec.transaction.Commit(ctx)
+		return exec.transaction.Commit(ctx, nil)
 	}
 
 	return nil
@@ -112,7 +112,7 @@ func (exec *SimpleExecutor) Commit(ctx context.Context, require bool) error {
 func (exec *SimpleExecutor) Rollback(ctx context.Context, require bool) error {
 	if !exec.closed {
 		if require {
-			return exec.transaction.Rollback(ctx)
+			return exec.transaction.Rollback(ctx, nil)
 		}
 	}
 	return nil

@@ -23,7 +23,7 @@ import (
 )
 
 type Handler interface {
-	Prepare(sql string) (statement.Statement, error)
+	Prepare(ctx context.Context, sql string) (statement.Statement, error)
 
 	Query(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error)
 

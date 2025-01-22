@@ -26,11 +26,11 @@ import (
 
 type defaultHandler sql.DB
 
-func (conn *defaultHandler) Prepare(sqlStr string) (statement.Statement, error) {
+func (conn *defaultHandler) Prepare(ctx context.Context, sqlStr string) (statement.Statement, error) {
 	db := (*sql.DB)(conn)
-	s, err := db.Prepare(sqlStr)
+	s, err := db.PrepareContext(ctx, sqlStr)
 	if err != nil {
-		return nil, errors.ConnectionPrepareError
+		return nil, errors.ConnectionPrepareError.Format(err)
 	}
 	return (*sqlStatement)(s), nil
 }
@@ -55,12 +55,13 @@ func (conn *defaultHandler) Execute(ctx context.Context, stmt string, params ...
 
 type transactionHandler sql.Tx
 
-func (transHandler *transactionHandler) Prepare(sqlStr string) (statement.Statement, error) {
-	ret := &transactionStatement{
-		tx:  (*sql.Tx)(transHandler),
-		sql: sqlStr,
+func (transHandler *transactionHandler) Prepare(ctx context.Context, sqlStr string) (statement.Statement, error) {
+	tx := (*sql.Tx)(transHandler)
+	stmt, err := tx.PrepareContext(ctx, sqlStr)
+	if err != nil {
+		return nil, errors.ConnectionPrepareError.Format(err)
 	}
-	return ret, nil
+	return (*sqlStatement)(stmt), nil
 }
 
 func (transHandler *transactionHandler) Query(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {

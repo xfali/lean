@@ -61,21 +61,25 @@ func (trans *defaultTransaction) Ping(ctx context.Context) bool {
 	return trans.db.PingContext(ctx) == nil
 }
 
-func (trans *defaultTransaction) Begin(ctx context.Context) error {
+func (trans *defaultTransaction) Begin(ctx context.Context, successCallback func(handler.Handler) error) error {
 	if !atomic.CompareAndSwapInt32(&trans.state, transaction.StateUnknown, transaction.StateBegin) {
 		return errors.TransactionHaveBegin
 	}
 	tx, err := trans.db.Begin()
+
 	if err != nil {
 		return errors.TransactionBeginError.Format(err)
 	}
 	trans.locker.Lock()
 	trans.tx = tx
 	trans.locker.Unlock()
+	if successCallback != nil {
+		return successCallback((*transactionHandler)(trans.tx))
+	}
 	return nil
 }
 
-func (trans *defaultTransaction) Commit(ctx context.Context) error {
+func (trans *defaultTransaction) Commit(ctx context.Context, successCallback func(handler.Handler) error) error {
 	if !atomic.CompareAndSwapInt32(&trans.state, transaction.StateBegin, transaction.StateCommitting) {
 		return errors.TransactionWithoutBegin
 	}
@@ -100,12 +104,15 @@ func (trans *defaultTransaction) Commit(ctx context.Context) error {
 		atomic.StoreInt32(&trans.state, transaction.StateBegin)
 		return errors.TransactionCommitError.Format(err)
 	} else {
+		if successCallback != nil {
+			err = successCallback((*transactionHandler)(trans.tx))
+		}
 		atomic.StoreInt32(&trans.state, transaction.StateUnknown)
+		return err
 	}
-	return nil
 }
 
-func (trans *defaultTransaction) Rollback(ctx context.Context) error {
+func (trans *defaultTransaction) Rollback(ctx context.Context, successCallback func(handler.Handler) error) error {
 	if !atomic.CompareAndSwapInt32(&trans.state, transaction.StateBegin, transaction.StateRollbacking) {
 		return errors.TransactionWithoutBegin
 	}
@@ -130,7 +137,10 @@ func (trans *defaultTransaction) Rollback(ctx context.Context) error {
 		atomic.StoreInt32(&trans.state, transaction.StateBegin)
 		return errors.TransactionRollbackError.Format(err)
 	} else {
+		if successCallback != nil {
+			err = successCallback((*transactionHandler)(trans.tx))
+		}
 		atomic.StoreInt32(&trans.state, transaction.StateUnknown)
+		return err
 	}
-	return nil
 }

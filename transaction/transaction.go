@@ -35,9 +35,9 @@ type Transaction interface {
 
 	GetHandler() handler.Handler
 
-	Begin(ctx context.Context) error
+	Begin(ctx context.Context, successCallback func(handler.Handler) error) error
 
-	Commit(ctx context.Context) error
+	Commit(ctx context.Context, successCallback func(handler.Handler) error) error
 
-	Rollback(ctx context.Context) error
+	Rollback(ctx context.Context, successCallback func(handler.Handler) error) error
 }

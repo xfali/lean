@@ -25,12 +25,11 @@ import (
 type sqlStatement sql.Stmt
 
 type transactionStatement struct {
-	tx  *sql.Tx
-	sql string
+	stmt *sql.Stmt
 }
 
 func (transStatement *transactionStatement) Query(ctx context.Context, params ...interface{}) (resultset.Result, error) {
-	rows, err := transStatement.tx.QueryContext(ctx, transStatement.sql, params...)
+	rows, err := transStatement.stmt.QueryContext(ctx, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +37,7 @@ func (transStatement *transactionStatement) Query(ctx context.Context, params ..
 }
 
 func (transStatement *transactionStatement) Execute(ctx context.Context, params ...interface{}) (resultset.Result, error) {
-	r, err := transStatement.tx.ExecContext(ctx, transStatement.sql, params...)
+	r, err := transStatement.stmt.ExecContext(ctx, params...)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +46,7 @@ func (transStatement *transactionStatement) Execute(ctx context.Context, params 
 
 func (transStatement *transactionStatement) Close() error {
 	//Will be closed when commit or rollback
-	return nil
+	return transStatement.stmt.Close()
 }
 
 func (s *sqlStatement) Query(ctx context.Context, params ...interface{}) (resultset.Result, error) {
