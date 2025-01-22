@@ -7,6 +7,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/vesoft-inc/nebula-go/v3 v3.4.0-1 h1:Sf04vpRD/O+WKXfp6bDNNwvIzD3Tls0t1TZpVV8W3sw=
 github.com/vesoft-inc/nebula-go/v3 v3.4.0-1/go.mod h1:+sXv05jYQBARdTbTcIEsWVXCnF/6ttOlDK35xQ6m54s=
+github.com/xfali/aop v0.0.0-20230117133031-83f64b50312b h1:7u9twWOpBvrCgwVI3zBqxFotoSIx+IWGZ9oKJreFXXw=
+github.com/xfali/aop v0.0.0-20230117133031-83f64b50312b/go.mod h1:XcPlImFWgwSUaR34iDPMOeClVFV+9nvuhStxKrcvl84=
 github.com/xfali/reflection v0.0.0-20230406143950-299589bbddbe h1:Cp2NH/u33Z58USfWYWZIw9V1di5z5uFEIkSm4OzwVxI=
 github.com/xfali/reflection v0.0.0-20230406143950-299589bbddbe/go.mod h1:fUkXamR1SOF8bp1WoOTu4yVgvRPtm5BzLX/YCS35Htw=
 github.com/xfali/xlog v0.1.6 h1:siylEJWs5jywGCb1yXriTAHA5hhkOO0d59rW6+HrfXs=
