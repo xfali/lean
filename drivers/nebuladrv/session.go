@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023, Xiongfa Li.
+ * Copyright (C) 2023-2025, Xiongfa Li.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +19,7 @@ package nebuladrv
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	nebula "github.com/vesoft-inc/nebula-go/v3"
 	"github.com/xfali/lean/resultset"
@@ -36,6 +37,18 @@ func NewNebulaSession(sess *nebula.Session) *nebulaSession {
 
 func (s *nebulaSession) Query(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
 	return s.Execute(ctx, stmt, params...)
+}
+
+func (s *nebulaSession) Begin() error {
+	return errors.New("Nebula not support transaction ")
+}
+
+func (s *nebulaSession) Commit() error {
+	return errors.New("Nebula not support transaction ")
+}
+
+func (s *nebulaSession) Rollback() error {
+	return errors.New("Nebula not support transaction ")
 }
 
 func (s *nebulaSession) Execute(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {

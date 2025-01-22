@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023, Xiongfa Li.
+ * Copyright (C) 2023-2025, Xiongfa Li.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,6 +45,9 @@ func (r *sqlQueryResultSet) Scan(dest ...interface{}) error {
 }
 
 func (r *sqlQueryResultSet) Close() error {
+	if r.rows != nil {
+		return r.rows.Close()
+	}
 	return nil
 }
 

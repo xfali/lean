@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2023-2025, Xiongfa Li.
- * All rights reserved.
+ * Copyright (C) 2024-2025, Xiongfa Li.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +14,23 @@
  * limitations under the License.
  */
 
-package session
+package executor
 
 import (
 	"context"
 	"github.com/xfali/lean/resultset"
 )
 
-type Session interface {
+type Executor interface {
+	Close(ctx context.Context, rollback bool) error
+
 	Query(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error)
 
 	Execute(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error)
 
-	Close() error
+	Begin(ctx context.Context) error
+
+	Commit(ctx context.Context, require bool) error
+
+	Rollback(ctx context.Context, require bool) error
 }

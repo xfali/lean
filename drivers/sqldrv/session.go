@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023, Xiongfa Li.
+ * Copyright (C) 2023-2025, Xiongfa Li.
  * All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,7 @@ package sqldrv
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"github.com/xfali/lean/resultset"
 )
 
@@ -48,6 +49,18 @@ func (s *sqlSession) Execute(ctx context.Context, stmt string, params ...interfa
 	}
 
 	return NewSqlExecResultSet(v), nil
+}
+
+func (s *sqlSession) Begin() error {
+	return errors.New("Sql not support transaction ")
+}
+
+func (s *sqlSession) Commit() error {
+	return errors.New("Sql not support transaction ")
+}
+
+func (s *sqlSession) Rollback() error {
+	return errors.New("Sql not support transaction ")
 }
 
 func (s *sqlSession) Close() error {
