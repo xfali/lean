@@ -59,11 +59,11 @@ func (s *sqlSession) Ping(ctx context.Context) bool {
 }
 
 func (s *sqlSession) Query(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
-	return s.exec.Query(ctx, stmt, params)
+	return s.exec.Query(ctx, stmt, params...)
 }
 
 func (s *sqlSession) Execute(ctx context.Context, stmt string, params ...interface{}) (resultset.Result, error) {
-	return s.exec.Execute(ctx, stmt, params)
+	return s.exec.Execute(ctx, stmt, params...)
 }
 
 func (s *sqlSession) Begin(ctx context.Context) error {
