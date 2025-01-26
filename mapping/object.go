@@ -22,7 +22,7 @@ import (
 	"reflect"
 )
 
-const (
+var (
 	FieldAliasTagName = "column"
 	SliceDummyColumn  = ""
 )
@@ -70,16 +70,20 @@ func deserialize(dst reflect.Value, columns []string, values []interface{}) bool
 	}
 	rv := dst
 	rt := rv.Type()
-	if rt.Kind() == reflect.Slice {
-		et := rt.Elem()
-		rv = reflect.New(et).Elem()
+	if BinaryType.AssignableTo(rt) {
+		return deserializeValue(rv, columns, vv)
+	} else {
+		if rt.Kind() == reflect.Slice {
+			et := rt.Elem()
+			rv = reflect.New(et).Elem()
+		}
+		next := deserializeValue(rv, columns, vv)
+		if rt.Kind() == reflect.Slice {
+			dst.Set(reflect.Append(dst, rv))
+			return true
+		}
+		return next
 	}
-	next := deserializeValue(rv, columns, vv)
-	if rt.Kind() == reflect.Slice {
-		dst.Set(reflect.Append(dst, rv))
-		return true
-	}
-	return next
 }
 
 func deserializeValue(rv reflect.Value, columns []string, values []reflect.Value) bool {
@@ -101,34 +105,44 @@ func deserializeValue(rv reflect.Value, columns []string, values []reflect.Value
 				}
 			}
 		case reflect.Slice:
-			gv := getValue(rt.Elem(), values[i])
-			if gv.IsValid() {
-				rv.Set(gv)
+			if BinaryType.AssignableTo(rt) {
+				_ = reflection.SetValue(rv, values[0])
+				return false
+			} else {
+				gv := getValue(rt.Elem(), values[i])
+				if gv.IsValid() {
+					rv.Set(gv)
+				}
 			}
 		case reflect.Struct:
-			tt := rv.Type()
-			s := tt.NumField()
-			for j := 0; j < s; j++ {
-				ff := tt.Field(j)
-				name := ff.Name
-				if tn, ok := ff.Tag.Lookup(FieldAliasTagName); ok {
-					name = tn
-				}
-				if name == columns[i] {
-					fv := rv.Field(j)
-					ft := fv.Type()
-					gv := getValue(ft, values[i])
-					if gv.IsValid() {
-						if gv.Type().AssignableTo(ft) {
-							fv.Set(gv)
-						}
+			if TimeType.AssignableTo(rt) {
+				_ = reflection.SetValue(rv, values[0])
+				return false
+			} else {
+				tt := rv.Type()
+				s := tt.NumField()
+				for j := 0; j < s; j++ {
+					ff := tt.Field(j)
+					name := ff.Name
+					if tn, ok := ff.Tag.Lookup(FieldAliasTagName); ok {
+						name = tn
 					}
-					break
+					if name == columns[i] {
+						fv := rv.Field(j)
+						ft := fv.Type()
+						gv := getValue(ft, values[i])
+						if gv.IsValid() {
+							if gv.Type().AssignableTo(ft) {
+								fv.Set(gv)
+							}
+						}
+						break
+					}
 				}
 			}
 		default:
 			_ = reflection.SetValue(rv, values[0])
-			break
+			return false
 		}
 	}
 	return false
@@ -146,7 +160,8 @@ func getValue(et reflect.Type, v reflect.Value) reflect.Value {
 		return v
 	}
 	v = interfaceValue(v)
-	if v.Type().AssignableTo(et) {
+	vt := v.Type()
+	if vt.AssignableTo(et) {
 		return v
 	} else {
 		if !reflection.CheckValueNilSafe(v) {
@@ -165,13 +180,19 @@ func getValue(et reflect.Type, v reflect.Value) reflect.Value {
 				_ = deserializeValue(ret, columns, values)
 				return ret
 			case reflect.Slice:
-				ret := reflect.MakeSlice(reflect.SliceOf(et), 0, v.Len())
-				for i := 0; i < v.Len(); i++ {
-					retV := reflect.New(et).Elem()
-					_ = deserializeValue(retV, []string{SliceDummyColumn}, []reflect.Value{v.Index(i)})
-					ret.Set(reflect.Append(ret, retV))
+				if BinaryType.AssignableTo(vt) {
+					vv := reflect.New(et).Elem()
+					_ = reflection.SetValue(vv, v)
+					return vv
+				} else {
+					ret := reflect.MakeSlice(reflect.SliceOf(et), 0, v.Len())
+					for i := 0; i < v.Len(); i++ {
+						retV := reflect.New(et).Elem()
+						_ = deserializeValue(retV, []string{SliceDummyColumn}, []reflect.Value{v.Index(i)})
+						ret.Set(reflect.Append(ret, retV))
+					}
+					return ret
 				}
-				return ret
 			case reflect.Struct:
 				tt := v.Type()
 				s := tt.NumField()
