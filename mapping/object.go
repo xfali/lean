@@ -54,10 +54,10 @@ func ScanRows2Value(dst reflect.Value, result resultset.QueryResult) (int64, err
 		if err != nil {
 			return count, err
 		}
+		count++
 		if !deserialize(dst, columns, values) {
 			break
 		}
-		count++
 	}
 
 	return count, nil
