@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/xfali/lean/session"
+	"time"
 )
 
 type ConnOpt func(*sqlConnection)
@@ -29,6 +30,11 @@ type sqlConnection struct {
 	db             *sql.DB
 	driverName     string
 	dataSourceName string
+
+	maxConn         int
+	maxIdleConn     int
+	connMaxIdleTime time.Duration
+	connMaxLifetime time.Duration
 
 	sessOpts []SessionOpt
 }
@@ -51,6 +57,10 @@ func (c *sqlConnection) Open() error {
 	if err != nil {
 		return fmt.Errorf("Open %s failed: %v ", c.driverName, err)
 	}
+	db.SetMaxOpenConns(c.maxConn)
+	db.SetMaxIdleConns(c.maxIdleConn)
+	db.SetConnMaxIdleTime(c.connMaxIdleTime)
+	db.SetConnMaxLifetime(c.connMaxLifetime)
 	c.db = db
 	return nil
 }
@@ -77,5 +87,29 @@ var ConnOpts connOpts
 func (o connOpts) SetCreateSessionOpts(opts ...SessionOpt) ConnOpt {
 	return func(connection *sqlConnection) {
 		connection.sessOpts = opts
+	}
+}
+
+func (o connOpts) SetMaxConn(maxConn int) ConnOpt {
+	return func(connection *sqlConnection) {
+		connection.maxConn = maxConn
+	}
+}
+
+func (o connOpts) SetMaxIdleConn(maxIdleConn int) ConnOpt {
+	return func(connection *sqlConnection) {
+		connection.maxIdleConn = maxIdleConn
+	}
+}
+
+func (o connOpts) SetConnMaxIdleTime(connMaxIdleTime time.Duration) ConnOpt {
+	return func(connection *sqlConnection) {
+		connection.connMaxIdleTime = connMaxIdleTime
+	}
+}
+
+func (o connOpts) SetConnMaxLifetime(connMaxLifetime time.Duration) ConnOpt {
+	return func(connection *sqlConnection) {
+		connection.connMaxLifetime = connMaxLifetime
 	}
 }

@@ -17,6 +17,7 @@
 package nebuladrv
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	nebula "github.com/vesoft-inc/nebula-go/v3"
@@ -25,9 +26,12 @@ import (
 )
 
 type nebulaConnection struct {
-	pool     *nebula.ConnectionPool
-	username string
-	password string
+	pool      *nebula.ConnectionPool
+	addresses []nebula.HostAddress
+	conf      nebula.PoolConfig
+	sslConfig *tls.Config
+	username  string
+	password  string
 }
 
 type ConnectionOpt func(*nebulaConnection)
@@ -44,9 +48,21 @@ func (c *nebulaConnection) Open() error {
 	if c.username == "" {
 		return errors.New("Nebula username is empty ")
 	}
+
 	if c.password == "" {
 		return errors.New("Nebula password is empty ")
 	}
+
+	if c.pool == nil {
+		p, err := nebula.NewSslConnectionPool(c.addresses, c.conf, c.sslConfig, &logger{
+			log: xlog.GetLogger(),
+		})
+		if err != nil {
+			return fmt.Errorf("Nebula connect init failed: %v ", err)
+		}
+		c.pool = p
+	}
+
 	return nil
 }
 
@@ -82,6 +98,39 @@ func (connOpts) WithUserInfo(username, password string) ConnectionOpt {
 	return func(connection *nebulaConnection) {
 		connection.username = username
 		connection.password = password
+	}
+}
+
+func (connOpts) SetAddresses(addresses []nebula.HostAddress) ConnectionOpt {
+	return func(connection *nebulaConnection) {
+		connection.addresses = addresses
+	}
+}
+
+func (connOpts) AddAddresses(addresses ...nebula.HostAddress) ConnectionOpt {
+	return func(connection *nebulaConnection) {
+		connection.addresses = append(connection.addresses, addresses...)
+	}
+}
+
+func (connOpts) AddAddress(host string, port int) ConnectionOpt {
+	return func(connection *nebulaConnection) {
+		connection.addresses = append(connection.addresses, nebula.HostAddress{
+			Host: host,
+			Port: port,
+		})
+	}
+}
+
+func (connOpts) SetConnectConfig(conf nebula.PoolConfig) ConnectionOpt {
+	return func(connection *nebulaConnection) {
+		connection.conf = conf
+	}
+}
+
+func (connOpts) SetSslConfig(sslConfig *tls.Config) ConnectionOpt {
+	return func(connection *nebulaConnection) {
+		connection.sslConfig = sslConfig
 	}
 }
 

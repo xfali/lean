@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	nebula "github.com/vesoft-inc/nebula-go/v3"
 	"github.com/xfali/lean/drivers/nebuladrv"
-	"github.com/xfali/lean/logger"
 	"github.com/xfali/lean/mapping"
 	"github.com/xfali/lean/session"
 	"testing"
@@ -34,20 +33,21 @@ var (
 )
 
 func RunWithSession(f func(sess session.Session) error) error {
-	pool, err := nebuladrv.NebulaConnPoolCreator([]nebula.HostAddress{
-		{
-			Host: TestHost,
-			Port: TestPort,
-		},
-	}, nebula.GetDefaultConf())(logger.GetLogger())
-	if err != nil {
-		return err
-	}
+	//pool, err := nebuladrv.NebulaConnPoolCreator([]nebula.HostAddress{
+	//	{
+	//		Host: TestHost,
+	//		Port: TestPort,
+	//	},
+	//}, nebula.GetDefaultConf())(logger.GetLogger())
+	//if err != nil {
+	//	return err
+	//}
 	conn := nebuladrv.NewNebulaConnection(
 		nebuladrv.ConnOpts.WithUserInfo("root", "test"),
-		nebuladrv.ConnOpts.WithConnectionPool(pool),
+		nebuladrv.ConnOpts.AddAddress(TestHost, TestPort),
+		nebuladrv.ConnOpts.SetConnectConfig(nebula.GetDefaultConf()),
 	)
-	err = conn.Open()
+	err := conn.Open()
 	if err != nil {
 		return err
 	}
